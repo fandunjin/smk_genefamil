@@ -47,17 +47,17 @@ nohup snakemake --core 32 --use-conda run_meme &
 ## 需要下载的数据，都下载到1.database中 ####
 ## 家族HMM文件在该网站中下载，修改对应的PF号即可：https://www.ebi.ac.uk/interpro/entry/pfam/PF03106/
 ## hmm数据下载
-wget -c ftp://ftp.ebi.ac.uk:21/pub/databases/Pfam/current_release/Pfam-A.hmm.gz
+wget -c https://ftp.ebi.ac.uk/pub/databases/Pfam/releases/Pfam38.0/Pfam-A.hmm.gz
 
-wget -c ftp://ftp.ebi.ac.uk:21/pub/databases/Pfam/current_release/Pfam-A.hmm.dat.gz
+wget -c https://ftp.ebi.ac.uk/pub/databases/Pfam/releases/Pfam38.0/Pfam-A.hmm.dat.gz
 
-wget -c ftp://ftp.ebi.ac.uk:21/pub/databases/Pfam/current_release/active_site.dat.gz
+wget -c https://ftp.ebi.ac.uk/pub/databases/Pfam/releases/Pfam38.0/active_site.dat.gz
 
-gunzip -c Pfam-A.hmm.gz > 1.database
+gunzip -c Pfam-A.hmm.gz > 1.database/Pfam-A.hmm
 
-gunzip -c Pfam-A.hmm.dat.gz > 1.database
+gunzip -c Pfam-A.hmm.dat.gz > 1.database/Pfam-A.hmm.dat
 
-gunzip -c active_site.dat.gz > 1.database
+gunzip -c active_site.dat.gz > 1.database/active_site.dat
 ## 拟南芥的pep和domian数据(https://www.arabidopsis.org/)
 wget -c --no-check-certificate  https://www.arabidopsis.org/download_files/Proteins/Domains/all.domains.txt
 
