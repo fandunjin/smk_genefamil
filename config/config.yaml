@@ -1,0 +1,40 @@
+# ---------------- 基本参数 ----------------
+species_name: "Hf"  # 物种名称
+family: "WRKY"      # 基因家族名称
+
+pep_fa: "1.database/hfl/hfl.pep"       # 待分析蛋白 fasta
+pfam_hmm: "1.database/hfl/WRKY/PF03106.hmm"
+outdir: "2.hmmsearch"
+evalue: 1e-5
+threads: 32
+
+# ---------------- BLAST / 模式植物参考文件 ----------------
+blast_outdir: "3.blast"
+tair_domains: "1.database/ath.domain"
+arabidopsis_pep: "1.database/ath.pep"
+rice_pfam: "1.database/osa.pfam"
+rice_pep: "1.database/osa.pep"
+pfam_id: "PF03106"
+
+# ---------------- BLAST 参数 ----------------
+blast_evalue: 1e-10
+blast_max_align: 10
+blast_db_title: "Tf_Ath_Osa"
+
+# ---------------- Identification / Pfam ----------------
+ident_dir: "4.identification"                # 结果输出目录
+pfam_a_hmm: "1.database/Pfam-A.hmm"         # Pfam-A.hmm（已下载并解压）
+gff3: "1.database/hfl/hfl.gff3"             # 基因注释 GFF3
+
+# ---------------- Tree 输出目录 ----------------
+tree_dir: "5.tree"   # 保存进化树文件
+
+# ---------------- Motif / Gene Structure ----------------
+motif_dir: "6.motif"  # motif结果目录
+
+
+
+# ---------------- 脚本路径（无需改动） ----------------
+get_geneinfo_script: "scripts/get_geneinfo_by_id.py"
+pfam_scan_script: "scripts/PfamScan/pfam_scan.pl"
+extract_meme_script: "scripts/extract_meme_locations.py"

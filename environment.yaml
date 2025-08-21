@@ -1,0 +1,28 @@
+name: genefamily
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+channel_priority: strict
+dependencies:
+  - python=3.12
+  - mamba
+  - snakemake
+  - hmmer
+  - blast
+  - meme
+  - trimal
+  - muscle
+  - iqtree
+  - fasttree
+  - gffread
+  - clustalw
+  - seqkit
+  - jcvi
+  - sra-tools
+  - fastqc
+  - multiqc
+  - trim-galore
+  - hisat2
+  - samtools
+  - subread
