@@ -2,18 +2,26 @@
 ### First step ###
 # 指定镜像（可选）
 conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free
+
 conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge
+
 conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/bioconda
+
 conda config --set show_channel_urls yes
 # 创建环境
 mamba create -c bioconda -f environment.yaml
 # 下载hmm
 # hmm数据下载
 wget -c https://ftp.ebi.ac.uk/pub/databases/Pfam/releases/Pfam38.0/Pfam-A.hmm.gz
+
 wget -c https://ftp.ebi.ac.uk/pub/databases/Pfam/releases/Pfam38.0/Pfam-A.hmm.dat.gz
+
 wget -c https://ftp.ebi.ac.uk/pub/databases/Pfam/releases/Pfam38.0/active_site.dat.gz
+
 gunzip -c Pfam-A.hmm.gz > 1.database/Pfam-A.hmm
+
 gunzip -c Pfam-A.hmm.dat.gz > 1.database/Pfam-A.hmm.dat
+
 gunzip -c active_site.dat.gz > 1.database/active_site.dat
 
 ### Second step ###
@@ -40,16 +48,23 @@ nohup snakemake --core 32 --use-conda run_meme &
 # 家族HMM文件在该网站中下载，修改对应的PF号即可：https://www.ebi.ac.uk/interpro/entry/pfam/PF03106/
 # hmm数据下载
 wget -c ftp://ftp.ebi.ac.uk:21/pub/databases/Pfam/current_release/Pfam-A.hmm.gz
+
 wget -c ftp://ftp.ebi.ac.uk:21/pub/databases/Pfam/current_release/Pfam-A.hmm.dat.gz
+
 wget -c ftp://ftp.ebi.ac.uk:21/pub/databases/Pfam/current_release/active_site.dat.gz
+
 gunzip -c Pfam-A.hmm.gz > 1.database
+
 gunzip -c Pfam-A.hmm.dat.gz > 1.database
+
 gunzip -c active_site.dat.gz > 1.database
 # 拟南芥的pep和domian数据(https://www.arabidopsis.org/)
 wget -c --no-check-certificate  https://www.arabidopsis.org/download_files/Proteins/Domains/all.domains.txt
+
 wget -c --no-check-certificate  https://www.arabidopsis.org/download/file?path=Proteins/Araport11_protein_lists/Araport11_pep_20250411.gz
 # 水稻的两个数据下载
 wget -c http://rice.uga.edu/pub/data/Eukaryotic_Projects/o_sativa/annotation_dbs/pseudomolecules/version_7.0/all.dir/all.pfam
+
 wget -c http://rice.uga.edu/pub/data/Eukaryotic_Projects/o_sativa/annotation_dbs/pseudomolecules/version_7.0/all.dir/all.pep
 # 单物种序列比对中，-super5加速，会牺牲部分精度，可删除
 ### 到combine_gene_pep_info为止，就得到筛选结果和基本理化性质
