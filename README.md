@@ -79,28 +79,16 @@ conda create -n pfam_scan pfam_scan -y
 rule pfam_scan:
 
     input:
-    
         pep = HMM_BLAST_PEP,
-        
         hmm = expand(PFAM_A_HMM + ".{ext}", ext=["h3f", "h3i", "h3m", "h3p"])
-        
     output: PFAM_SCAN_OUT
-    
     log: f"{ID_DIR}/{PREFIX}_Pfam_scan.log"
-    
     conda: "env/pfamscan.yaml"
-    
-    shell: ""
-    
+    shell: 
         """
-        
         conda init
-        
         conda atctivate pfam_scan
-        
         mkdir -p {ID_DIR} && pfam_scan.pl -fasta {input[0]} -dir 1.database -cpu 8 -out {output} > {log} 2>&1
-        
         conda deatctivate
-        
         """
 
