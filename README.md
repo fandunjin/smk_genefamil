@@ -1,6 +1,8 @@
 # Usage 使用方法 #
 # First step #
 git clone https://github.com/fandunjin/smk_genefamily.git
+
+cd smk_genefamily
 ## 指定镜像（可选）
 conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free
 
