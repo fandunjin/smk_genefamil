@@ -10,9 +10,11 @@ conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/
 conda config --set show_channel_urls yes
 ## 创建环境（使用mamba创建环境）
 mamba create -c bioconda -f environment.yaml
+
 conda activate genefamily
 ## 安装所需包
 Rscript scripts/install_packages.R
+
 python scripts/install_packages.py
 ## 下载hmm
 ### hmm数据下载
