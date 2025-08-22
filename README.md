@@ -8,8 +8,11 @@ conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/
 conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/bioconda
 
 conda config --set show_channel_urls yes
-## 创建环境
+## 创建环境（使用mamba创建环境）
 mamba create -c bioconda -f environment.yaml
+conda activate genefamily
+## 安装R所需包
+Rscript scripts/install_packages.R
 ## 下载hmm
 ### hmm数据下载
 wget -c https://ftp.ebi.ac.uk/pub/databases/Pfam/releases/Pfam38.0/Pfam-A.hmm.gz
@@ -68,4 +71,4 @@ wget -c http://rice.uga.edu/pub/data/Eukaryotic_Projects/o_sativa/annotation_dbs
 wget -c http://rice.uga.edu/pub/data/Eukaryotic_Projects/o_sativa/annotation_dbs/pseudomolecules/version_7.0/all.dir/all.pep
 ## 单物种序列比对中，-super5加速，会牺牲部分精度，可删除
 ### 到combine_gene_pep_info为止，就得到筛选结果和基本理化性质
-## smk_genefamily
+
