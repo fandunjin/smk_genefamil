@@ -72,3 +72,22 @@ wget -c http://rice.uga.edu/pub/data/Eukaryotic_Projects/o_sativa/annotation_dbs
 ## 单物种序列比对中，-super5加速，会牺牲部分精度，可删除
 ### 到combine_gene_pep_info为止，就得到筛选结果和基本理化性质
 
+## 如果需要提交到无法连接网络的节点运行需要提前安装好pfamscan
+conda create -n pfam_scan pfam_scan -y
+### 并修改snakefile中的rule pfam_scan，改为：
+#### 注意在shell的第一行修改对应的初始化命令
+rule pfam_scan:
+    input:
+        pep = HMM_BLAST_PEP,
+        hmm = expand(PFAM_A_HMM + ".{ext}", ext=["h3f", "h3i", "h3m", "h3p"])
+    output: PFAM_SCAN_OUT
+    log: f"{ID_DIR}/{PREFIX}_Pfam_scan.log"
+    conda: "env/pfamscan.yaml"
+    shell: ""
+        """
+        conda init
+        conda atctivate pfam_scan
+        mkdir -p {ID_DIR} && pfam_scan.pl -fasta {input[0]} -dir 1.database -cpu 8 -out {output} > {log} 2>&1
+        conda deatctivate
+        """
+
