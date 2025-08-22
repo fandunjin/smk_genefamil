@@ -11,8 +11,9 @@ conda config --set show_channel_urls yes
 ## 创建环境（使用mamba创建环境）
 mamba create -c bioconda -f environment.yaml
 conda activate genefamily
-## 安装R所需包
+## 安装所需包
 Rscript scripts/install_packages.R
+python scripts/install_packages.py
 ## 下载hmm
 ### hmm数据下载
 wget -c https://ftp.ebi.ac.uk/pub/databases/Pfam/releases/Pfam38.0/Pfam-A.hmm.gz
