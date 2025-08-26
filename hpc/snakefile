@@ -1,0 +1,512 @@
+# snakefile (修复版本)
+import os
+import glob
+
+configfile: "config/config.yaml"
+
+# ================== 基本参数 ==================
+SPECIES = list(config.get("species").keys())
+FAMILY = config.get("family")
+PFAM_ID = config.get("pfam_id")
+
+# ================== 创建具体的目标文件列表 ==================
+TARGETS = expand(
+    [
+        # HMM 搜索相关文件
+        "{species}_{family}/2.hmmsearch/{species}_{family}.domtblout",
+        "{species}_{family}/2.hmmsearch/{species}_{family}.hmmout",
+        "{species}_{family}/2.hmmsearch/{species}_{family}.filter.1st",
+        "{species}_{family}/2.hmmsearch/{species}_{family}_1st_id.fa",
+        "{species}_{family}/2.hmmsearch/{species}_{family}_1st_id.aln",
+        "{species}_{family}/2.hmmsearch/{species}_{family}_new_{family}.hmm",
+        "{species}_{family}/2.hmmsearch/{species}_{family}_new_{family}.domtblout",
+        "{species}_{family}/2.hmmsearch/{species}_{family}_new_{family}.hmmout",
+        "{species}_{family}/2.hmmsearch/{species}_{family}_new_{family}.filter.2st",
+        "{species}_{family}/2.hmmsearch/{species}_{family}_2st_id.fa",
+        
+        # BLAST 相关文件
+        "{species}_{family}/3.blast/TAIR_{pfam_id}.id",
+        "{species}_{family}/3.blast/Rice_{pfam_id}.id",
+        "{species}_{family}/3.blast/TAIR_{pfam_id}.pep.fa",
+        "{species}_{family}/3.blast/Rice_{pfam_id}.pep.fa",
+        "{species}_{family}/3.blast/TAIR_Rice_{pfam_id}.pep.fa",
+        "{species}_{family}/3.blast/TAIR_Rice_{pfam_id}.count",
+        "{species}_{family}/3.blast/{species}_{family}_TAIR_Rice.db.done",
+        "{species}_{family}/3.blast/{species}_{family}.blast",
+        "{species}_{family}/3.blast/{species}_{family}.blast.id",
+        "{species}_{family}/3.blast/{species}_{family}.blast.count",
+        
+        # 识别相关文件
+        "{species}_{family}/4.identification/{species}_{family}_hmm_blast.id",
+        "{species}_{family}/4.identification/{species}_{family}_hmm_blast.pep.fa",
+        "{species}_{family}/4.identification/{species}_{family}_Pfam_scan.out",
+        "{species}_{family}/4.identification/{species}_{family}_pfam_scan.id",
+        "{species}_{family}/4.identification/{species}_{family}_pfam_scan.pep.fa",
+        "{species}_{family}/4.identification/{species}_{family}_gene_info.txt",
+        "{species}_{family}/4.identification/{species}_{family}_pfam_scan_info.xlsx",
+        "{species}_{family}/4.identification/{species}_{family}_combined_gene_pep_info.xlsx",
+        
+        # Motif 相关文件
+        "{species}_{family}/6.motif/{species}_{family}_meme_location.txt"
+    ],
+    species=SPECIES,
+    family=[FAMILY],
+    pfam_id=[PFAM_ID]
+)
+
+# ================== Workflow Rules ==================
+rule all:
+    input:
+        TARGETS
+        
+# ================== 函数定义 ==================
+def get_species_pep(wildcards):
+    return config["species"][wildcards.species]["pep_fa"]
+
+def get_species_gff3(wildcards):
+    return config["species"][wildcards.species]["gff3"]
+
+# ================== 路径模板 ==================
+# 使用通配符 {species} 来处理多物种
+BASE_DIR = "{species}_{family}"
+
+PEP_FA = get_species_pep
+PFAM_HMM = config.get("pfam_hmm")
+OUTDIR = f"{BASE_DIR}/2.hmmsearch"
+EVALUE = float(config.get("evalue", 1e-5))
+THREADS = int(config.get("threads", 32))
+
+# ================== BLAST 参数 ==================
+BLAST_DIR = f"{BASE_DIR}/3.blast"
+TAIR_DOMAINS = config.get("tair_domains")
+ARABIDOPSIS_PEP = config.get("arabidopsis_pep")
+RICE_PFAM = config.get("rice_pfam")
+RICE_PEP = config.get("rice_pep")
+
+BLAST_EVALUE = config.get("blast_evalue", 1e-10)
+BLAST_MAX_ALIGN = config.get("blast_max_align", 10)
+BLAST_DB_TITLE = config.get("blast_db_title", "Sbi_Ath_Osa")
+BLAST_OUT = f"{BLAST_DIR}/{{species}}_{FAMILY}.blast"
+BLAST_IDS = f"{BLAST_DIR}/{{species}}_{FAMILY}.blast.id"
+BLAST_COUNT = f"{BLAST_DIR}/{{species}}_{FAMILY}.blast.count"
+
+TAIR_IDS = f"{BLAST_DIR}/TAIR_{PFAM_ID}.id"
+RICE_IDS = f"{BLAST_DIR}/Rice_{PFAM_ID}.id"
+TAIR_PEP_OUT = f"{BLAST_DIR}/TAIR_{PFAM_ID}.pep.fa"
+RICE_PEP_OUT = f"{BLAST_DIR}/Rice_{PFAM_ID}.pep.fa"
+COMBINED_PEP = f"{BLAST_DIR}/TAIR_Rice_{PFAM_ID}.pep.fa"
+COUNT_FILE = f"{BLAST_DIR}/TAIR_Rice_{PFAM_ID}.count"
+
+# ================== Pfam / Identification ==================
+ID_DIR = f"{BASE_DIR}/4.identification"
+PFAM_A_HMM = config.get("pfam_a_hmm")
+PFAM_SCAN_OUT = f"{ID_DIR}/{{species}}_{FAMILY}_Pfam_scan.out"
+PFAM_SCAN_ID = f"{ID_DIR}/{{species}}_{FAMILY}_pfam_scan.id"
+PFAM_SCAN_PEP = f"{ID_DIR}/{{species}}_{FAMILY}_pfam_scan.pep.fa"
+GFF3 = get_species_gff3
+GENE_INFO_OUT = f"{ID_DIR}/{{species}}_{FAMILY}_gene_info.txt"
+PFAM_INFO_OUT = f"{ID_DIR}/{{species}}_{FAMILY}_pfam_scan_info.xlsx"
+COMBINED_OUT = f"{ID_DIR}/{{species}}_{FAMILY}_combined_gene_pep_info.xlsx"
+
+# ================== 脚本路径 ==================
+GET_GENEINFO_SCRIPT = config.get("get_geneinfo_script")
+PFAM_SCAN_SCRIPT = config.get("pfam_scan_script")
+EXTRACT_MEME_SCRIPT = config.get("extract_meme_script")
+
+# ================== 输出文件 ==================
+FIRST_DOM = f"{OUTDIR}/{{species}}_{FAMILY}.domtblout"
+FIRST_HMMOUT = f"{OUTDIR}/{{species}}_{FAMILY}.hmmout"
+FIRST_IDS = f"{OUTDIR}/{{species}}_{FAMILY}.filter.1st"
+FIRST_FA = f"{OUTDIR}/{{species}}_{FAMILY}_1st_id.fa"
+FIRST_ALN = f"{OUTDIR}/{{species}}_{FAMILY}_1st_id.aln"
+NEW_HMM = f"{OUTDIR}/{{species}}_{FAMILY}_new_{FAMILY}.hmm"
+SECOND_DOM = f"{OUTDIR}/{{species}}_{FAMILY}_new_{FAMILY}.domtblout"
+SECOND_HMMOUT = f"{OUTDIR}/{{species}}_{FAMILY}_new_{FAMILY}.hmmout"
+SECOND_IDS = f"{OUTDIR}/{{species}}_{FAMILY}_new_{FAMILY}.filter.2st"
+SECOND_FA = f"{OUTDIR}/{{species}}_{FAMILY}_2st_id.fa"
+HMM_BLAST_ID = f"{ID_DIR}/{{species}}_{FAMILY}_hmm_blast.id"
+HMM_BLAST_PEP = f"{ID_DIR}/{{species}}_{FAMILY}_hmm_blast.pep.fa"
+
+# ================== Tree ==================
+TREE_DIR = f"{BASE_DIR}/5.tree"
+SINGLE_SPECIES_FA = f"{TREE_DIR}/{{species}}_{FAMILY}_pfam_scan.pep.fa"
+MULTI_SPECIES_FA = f"{TREE_DIR}/{{species}}_{FAMILY}_3_species.pep.fa"
+SINGLE_MUSCLE = f"{TREE_DIR}/{{species}}_{FAMILY}_pfam_scan.pep.muscle"
+MULTI_MUSCLE = f"{TREE_DIR}/{{species}}_{FAMILY}_3_species.pep.muscle"
+TREE_SINGLE = f"{TREE_DIR}/{{species}}_{FAMILY}_pfam_scan.pep.muscle.treefile"
+TREE_MULTI = f"{TREE_DIR}/{{species}}_{FAMILY}_3_species.pep.muscle.treefile"
+
+# ================== Motif ==================
+MOTIF_DIR = f"{BASE_DIR}/6.motif"
+MEME_LOCATION = f"{MOTIF_DIR}/{{species}}_{FAMILY}_meme_location.txt"
+
+# ================== 创建目录规则 ==================
+rule create_all_dirs:
+    output:
+        base_marker = touch("{species}_{family}/.base_dir_created"),
+        hmm_marker = touch("{species}_{family}/2.hmmsearch/.hmm_dir_created"),
+        blast_marker = touch("{species}_{family}/3.blast/.blast_dir_created"),
+        id_marker = touch("{species}_{family}/4.identification/.id_dir_created"),
+        tree_marker = touch("{species}_{family}/5.tree/.tree_dir_created"),
+        motif_marker = touch("{species}_{family}/6.motif/.motif_dir_created")
+    shell:
+        """
+        mkdir -p {wildcards.species}_{wildcards.family}/2.hmmsearch
+        mkdir -p {wildcards.species}_{wildcards.family}/3.blast
+        mkdir -p {wildcards.species}_{wildcards.family}/4.identification
+        mkdir -p {wildcards.species}_{wildcards.family}/5.tree
+        mkdir -p {wildcards.species}_{wildcards.family}/6.motif
+        touch {output.base_marker}
+        touch {output.hmm_marker}
+        touch {output.blast_marker}
+        touch {output.id_marker}
+        touch {output.tree_marker}
+        touch {output.motif_marker}
+        """
+
+# ================== HMM 搜索流程 ==================
+rule hmmsearch_initial:
+    input:
+        pep = PEP_FA,
+        hmm_dir = "{species}_{family}/2.hmmsearch/.hmm_dir_created"
+    output:
+        dom = FIRST_DOM,
+        out = FIRST_HMMOUT
+    params: 
+        pfam = PFAM_HMM
+    threads: THREADS
+    shell:
+        "hmmsearch --cut_tc --domtblout {output.dom} -o {output.out} {params.pfam} {input.pep}"
+
+rule parse_dom_initial:
+    input: FIRST_DOM
+    output: FIRST_IDS
+    params: evalue=EVALUE
+    shell:
+        "awk '$7<{params.evalue} && $1 !~ /^#/ {{print $1}}' {input} | sort -u > {output}"
+
+rule extract_first:
+    input:
+        db = PEP_FA,
+        ids = FIRST_IDS
+    output: FIRST_FA
+    shell: "seqkit grep -r -f {input.ids} {input.db} -o {output}"
+
+rule clustalw_align:
+    input: FIRST_FA
+    output: FIRST_ALN
+    threads: 2
+    shell: "clustalw -infile={input} -output=clustal -type=PROTEIN -outfile={output}"
+
+rule hmmbuild:
+    input: FIRST_ALN
+    output: NEW_HMM
+    shell: "hmmbuild {output} {input}"
+
+rule hmmsearch_second:
+    input:
+        hmm = NEW_HMM,
+        db = PEP_FA
+    output:
+        dom = SECOND_DOM,
+        out = SECOND_HMMOUT
+    threads: THREADS
+    shell: "hmmsearch --domtblout {output.dom} -o {output.out} {input.hmm} {input.db}"
+
+rule parse_dom_second:
+    input: SECOND_DOM
+    output: SECOND_IDS
+    params: evalue=EVALUE
+    shell: "awk '$7<{params.evalue} && $1 !~ /^#/ {{print $1}}' {input} | sort -u > {output}"
+
+rule extract_second:
+    input:
+        db = PEP_FA,
+        ids = SECOND_IDS
+    output: SECOND_FA
+    shell: "seqkit grep -r -f {input.ids} {input.db} -o {output}"
+
+# ================== BLAST / 植物家族提取 ==================
+rule extract_tair_ids:
+    input:
+        TAIR_DOMAINS,
+        blast_dir = "{species}_{family}/3.blast/.blast_dir_created"
+    output: TAIR_IDS
+    params: pfid=PFAM_ID
+    shell: "grep '{params.pfid}' {input[0]} | awk '{{print $1}}' | awk -F '.' '{{print $1}}' | sort | uniq > {output}"
+
+rule extract_tair_pep:
+    input:
+        ids = TAIR_IDS,
+        db = ARABIDOPSIS_PEP
+    output: TAIR_PEP_OUT
+    shell: "seqkit grep -r -f {input.ids} {input.db} -o {output}"
+
+rule extract_rice_ids:
+    input:
+        RICE_PFAM,
+        blast_dir = "{species}_{family}/3.blast/.blast_dir_created"
+    output: RICE_IDS
+    params: pfid=PFAM_ID
+    shell: "grep '{params.pfid}' {input[0]} | awk '{{print $1}}' | sort | uniq > {output}"
+
+rule extract_rice_pep:
+    input:
+        ids = RICE_IDS,
+        db = RICE_PEP
+    output: RICE_PEP_OUT
+    shell: "seqkit grep -r -f {input.ids} {input.db} -o {output}"
+
+rule combine_plant_pep:
+    input:
+        tair = TAIR_PEP_OUT,
+        rice = RICE_PEP_OUT
+    output:
+        combined = COMBINED_PEP,
+        count_file = COUNT_FILE
+    shell: "cat {input.tair} {input.rice} > {output.combined} && grep -c \'^>\' {output.combined} > {output.count_file}"
+
+rule makeblastdb:
+    input:
+        combined = COMBINED_PEP,
+        blast_dir = "{species}_{family}/3.blast/.blast_dir_created"
+    output: 
+        marker = "{species}_{family}/3.blast/{species}_{family}_TAIR_Rice.db.done"
+    params:
+        db_prefix = "{species}_{family}/3.blast/{species}_{family}_TAIR_Rice"
+    shell:
+        "makeblastdb -in {input.combined} -dbtype prot -title {BLAST_DB_TITLE} -parse_seqids -out {params.db_prefix} && touch {output.marker}"
+
+
+rule blastp_search:
+    input:
+        query = PEP_FA,
+        db_marker = "{species}_{family}/3.blast/{species}_{family}_TAIR_Rice.db.done"
+    output: BLAST_OUT
+    threads: THREADS
+    params: 
+        db_prefix = "{species}_{family}/3.blast/{species}_{family}_TAIR_Rice",
+        evalue = BLAST_EVALUE,
+        maxal = BLAST_MAX_ALIGN
+    shell: 
+        "blastp -query {input.query} -db {params.db_prefix} -outfmt '6 std qlen slen' -out {output} -evalue {params.evalue} -num_threads {threads} -num_alignments {params.maxal}"
+
+rule blast_filter:
+    input: BLAST_OUT
+    output:
+        ids = BLAST_IDS,
+        count_file = BLAST_COUNT
+    shell: "awk '{{print $1}}' {input} | sort | uniq > {output.ids} && wc -l {output.ids} > {output.count_file}"
+
+rule combine_hmm_blast_ids:
+    input:
+        hmm = SECOND_IDS,
+        blast = BLAST_IDS
+    output: HMM_BLAST_ID
+    shell: "mkdir -p $(dirname {output}) && cat {input.hmm} {input.blast} | sort | uniq > {output}"
+
+rule extract_hmm_blast_pep:
+    input:
+        ids = HMM_BLAST_ID,
+        db = PEP_FA
+    output: HMM_BLAST_PEP
+    shell: "mkdir -p $(dirname {output}) && seqkit grep -r -f {input.ids} {input.db} -o {output}"
+
+# ================== Pfam 扫描 ==================
+rule hmmpress_pfam:
+    input: PFAM_A_HMM
+    output:
+        PFAM_A_HMM + ".h3f",
+        PFAM_A_HMM + ".h3i",
+        PFAM_A_HMM + ".h3m",
+        PFAM_A_HMM + ".h3p"
+    log: "1.database/hmmpress.log"
+    shell: "hmmpress {input} > {log} 2>&1"
+
+rule pfam_scan:
+    input:
+        pep = HMM_BLAST_PEP,
+        hmm = expand(PFAM_A_HMM + ".{ext}", ext=["h3f", "h3i", "h3m", "h3p"]),
+        id_dir = "{species}_{family}/4.identification/.id_dir_created"
+    output: PFAM_SCAN_OUT
+    log: "{species}_{family}/4.identification/pfam_scan.log"
+    shell: 
+        """
+        source /hpcfile/users/92024269/cx/software/miniconda3/etc/profile.d/conda.sh
+        conda activate pfam_scan
+        mkdir -p {ID_DIR} && pfam_scan.pl -fasta {input.pep} -dir 1.database -cpu 8 -out {output} 2> {log} || (echo "pfam_scan failed with exit code $?" && cat {log} && exit 1)
+        conda deactivate
+        conda activate genefamily
+        """
+
+rule parse_pfam_scan:
+    input: PFAM_SCAN_OUT
+    output: PFAM_SCAN_ID
+    params: pfid=PFAM_ID
+    shell: "grep '{params.pfid}' {input} | awk '{{print $1}}' | sort | uniq > {output}"
+
+rule extract_pfam_pep:
+    input:
+        ids = PFAM_SCAN_ID,
+        db = PEP_FA
+    output: PFAM_SCAN_PEP
+    shell: "seqkit grep -r -f {input.ids} {input.db} -o {output}"
+
+# ================== Gene Info ==================
+rule get_gene_info:
+    input:
+        ids = PFAM_SCAN_ID,
+        gff = GFF3
+    output: GENE_INFO_OUT
+    params: script=GET_GENEINFO_SCRIPT
+    shell: "python3 {params.script} --arg1 {input.ids} --arg2 {input.gff} --arg3 {output}"
+
+rule compute_pep_properties:
+    input:
+        pfam_pep = PFAM_SCAN_PEP
+    output:
+        pfam_info = PFAM_INFO_OUT
+    params:
+        script = "scripts/compute_pep_properties.R"
+    shell:
+        "Rscript {params.script} {input.pfam_pep} {output.pfam_info}"
+
+rule combine_gene_pep_info:
+    input:
+        gene = GENE_INFO_OUT,
+        pep = PFAM_INFO_OUT
+    output:
+        combined = COMBINED_OUT
+    params:
+        script = "scripts/combine_gene_pep_info.py"
+    shell:
+        "python {params.script} {input.gene} {input.pep} {output.combined}"
+
+# ================== 辅助规则：生成所有combine_gene_pep_info结果 ==================
+rule combine_all_gene_pep_info:
+    input:
+        expand("{species}_{family}/4.identification/{species}_{family}_combined_gene_pep_info.xlsx",
+               species=SPECIES, family=[FAMILY])
+    output:
+        touch("all_combined_gene_pep_info.done")
+    shell:
+        "echo 'All combined gene pep info files created' && touch {output}"
+
+# ================== Tree ==================
+rule prepare_tree_data:
+    input:
+        single_pep = PFAM_SCAN_PEP,
+        tair_rice_pep = COMBINED_PEP,
+        tree_dir = "{species}_{family}/5.tree/.tree_dir_created"
+    output:
+        single = SINGLE_SPECIES_FA,
+        multi = MULTI_SPECIES_FA
+    shell:
+        """
+        cp {input.single_pep} {output.single}
+        cat {input.single_pep} {input.tair_rice_pep} > {output.multi}
+        """
+
+rule muscle_single:
+    input:
+        SINGLE_SPECIES_FA
+    output:
+        SINGLE_MUSCLE
+    log:
+        "{species}_{family}/5.tree/{species}_{family}_muscle_single.log"
+    threads:
+        THREADS
+    shell:
+        """
+        muscle -super5 {input} -output {output} -threads {threads} > {log} 2>&1
+        """
+
+rule muscle_multi:
+    input:
+        MULTI_SPECIES_FA
+    output:
+        MULTI_MUSCLE
+    log:
+        "{species}_{family}/5.tree/{species}_{family}_muscle_multi.log"
+    threads:
+        THREADS
+    shell:
+        """
+        muscle -super5 {input} -output {output} -threads {threads} > {log} 2>&1
+        """
+
+rule iqtree_single:
+    input: SINGLE_MUSCLE
+    output: TREE_SINGLE
+    log: "{species}_{family}/5.tree/{species}_{family}_iqtree_single.log"
+    threads: THREADS
+    shell: "iqtree -s {input} -m MFP -bb 1000 -bnni -nt AUTO -cmax 15 -redo > {log} 2>&1"
+
+rule iqtree_multi:
+    input: MULTI_MUSCLE
+    output: TREE_MULTI
+    log: "{species}_{family}/5.tree/{species}_{family}_iqtree_multi.log"
+    threads: THREADS
+    shell: "iqtree -s {input} -m MFP -bb 1000 -bnni -nt AUTO -cmax 15 -redo > {log} 2>&1"
+
+rule plot_tree_single:
+    input:
+        treefile = TREE_SINGLE
+    output:
+        tree_p = "{TREE_DIR}/{species}_{family}_phylogenetic_tree.png"
+    log: "{TREE_DIR}/{species}_{family}_plot_tree_single.log"
+    threads: 8
+    shell:
+        "Rscript scripts/plot_tree.R {input.treefile} {output.tree_p} > {log} 2>&1"
+
+rule plot_tree_multi:
+    input:
+        tree = TREE_MULTI
+    output:
+        plot = "{TREE_DIR}/{species}_{family}_multi_species_tree.png"
+    log: "{TREE_DIR}/{species}_{family}_plot_tree_multi.log"
+    shell:
+        "Rscript scripts/plot_tree.R {input.tree} {output.plot} > {log} 2>&1"
+
+# ================== Motif ==================
+rule run_meme:
+    input:
+        pep = PFAM_SCAN_PEP,
+        motif_dir = "{species}_{family}/6.motif/.motif_dir_created"
+    output:
+        motif = MEME_LOCATION
+    threads: 8
+    shell:
+        """
+        meme {input.pep} -protein -mod anr -nmotifs 15 -minw 10 -maxw 200 -oc $(dirname {output.motif}) > /dev/null 2>&1
+        python {EXTRACT_MEME_SCRIPT} --input $(dirname {output.motif})/meme.txt --output {output.motif}
+        """
+        
+# ================== 辅助规则：生成所有系统发育树结果 ==================
+rule plot_all_trees_single:
+    input:
+        expand("{species}_{family}/5.tree/{species}_{family}_phylogenetic_tree.png",
+               species=SPECIES, family=[FAMILY])
+    output:
+        touch("all_single_trees.done")
+    shell:
+        "echo 'All single species phylogenetic trees created' && touch {output}"
+
+rule plot_all_trees_multi:
+    input:
+        expand("{species}_{family}/5.tree/{species}_{family}_multi_species_tree.png",
+               species=SPECIES, family=[FAMILY])
+    output:
+        touch("all_multi_trees.done")
+    shell:
+        "echo 'All multi species phylogenetic trees created' && touch {output}"
+
+# ================== 辅助规则：生成所有Motif分析结果 ==================
+rule run_all_meme:
+    input:
+        expand("{species}_{family}/6.motif/{species}_{family}_meme_location.txt",
+               species=SPECIES, family=[FAMILY])
+    output:
+        touch("all_meme_analyses.done")
+    shell:
+        "echo 'All MEME motif analyses completed' && touch {output}"
